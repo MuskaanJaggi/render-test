@@ -1,70 +1,202 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>User Form</title>
+  <title>User Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<style>
-body{
-font-family: Arial;
-margin:40px;
-}
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f7f7f7;
+    }
 
-.card{
-max-width:500px;
-border:1px solid #ccc;
-padding:20px;
-border-radius:10px;
-}
+    .wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+    }
 
-input,select{
-width:100%;
-padding:8px;
-margin-top:6px;
-margin-bottom:10px;
-}
+    .card {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
 
-button{
-padding:10px;
-background:black;
-color:white;
-border:none;
-border-radius:6px;
-}
-</style>
+    h2 {
+      margin-top: 0;
+    }
 
+    label {
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    button {
+      margin-top: 14px;
+      background: black;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-row input {
+      flex: 1;
+    }
+
+    .search-row button {
+      width: 180px;
+      margin-top: 0;
+    }
+
+    .result-box {
+      margin-top: 18px;
+    }
+
+    .person-card {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 10px;
+      background: #fafafa;
+    }
+
+    .muted {
+      color: #666;
+    }
+
+    .empty {
+      padding: 12px;
+      background: #fff3cd;
+      border: 1px solid #ffe69c;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    .error {
+      padding: 12px;
+      background: #f8d7da;
+      border: 1px solid #f1aeb5;
+      border-radius: 8px;
+      margin-top: 12px;
+      color: #842029;
+    }
+
+    .success-note {
+      font-size: 13px;
+      color: #666;
+      margin-top: 8px;
+    }
+  </style>
 </head>
 
 <body>
+  <div class="wrapper">
+    <div class="card">
+      <h2>Add User Details</h2>
 
-<div class="card">
+      <form method="POST" action="/submit">
+        <label for="name">Name</label>
+        <input id="name" name="name" required />
 
-<h2>User Details</h2>
+        <label for="sapid">SAPID</label>
+        <input id="sapid" name="sapid" required />
 
-<form method="POST" action="/submit">
+        <label for="age">Age</label>
+        <input id="age" type="number" name="age" min="1" max="120" required />
 
-<label>Name</label>
-<input name="name" required>
+        <label for="gender">Gender</label>
+        <select id="gender" name="gender" required>
+          <option value="">Select</option>
+          <option>Male</option>
+          <option>Female</option>
+          <option>Other</option>
+          <option>Prefer not to say</option>
+        </select>
 
-<label>SAPID</label>
-<input name="sapid" required>
+        <button type="submit">Submit</button>
+        <div class="success-note">Submitting will save the data to your Render Postgres database.</div>
+      </form>
+    </div>
 
-<label>Age</label>
-<input type="number" name="age" min="1" max="120" required>
+    <div class="card">
+      <h2>Find User by Name</h2>
 
-<label>Gender</label>
-<select name="gender" required>
-<option value="">Select</option>
-<option>Male</option>
-<option>Female</option>
-<option>Other</option>
-<option>Prefer not to say</option>
-</select>
+      <div class="search-row">
+        <input id="searchName" type="text" placeholder="Enter full or partial name" />
+        <button type="button" onclick="searchPerson()">Search</button>
+      </div>
 
-<button type="submit">Submit</button>
+      <div id="searchResults" class="result-box"></div>
+    </div>
+  </div>
 
-</form>
+  <script>
+    async function searchPerson() {
+      const name = document.getElementById("searchName").value.trim();
+      const resultsDiv = document.getElementById("searchResults");
 
-</div>
+      resultsDiv.innerHTML = "";
 
+      if (!name) {
+        resultsDiv.innerHTML = '<div class="error">Please enter a name to search.</div>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/search?name=${encodeURIComponent(name)}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          resultsDiv.innerHTML = `<div class="error">${data.message || "Something went wrong."}</div>`;
+          return;
+        }
+
+        if (!data.results || data.results.length === 0) {
+          resultsDiv.innerHTML = '<div class="empty">No matching user found.</div>';
+          return;
+        }
+
+        let html = `<p class="muted">Found ${data.count} matching record(s)</p>`;
+
+        data.results.forEach(person => {
+          html += `
+            <div class="person-card">
+              <p><strong>Name:</strong> ${person.name}</p>
+              <p><strong>SAPID:</strong> ${person.sapid}</p>
+              <p><strong>Age:</strong> ${person.age}</p>
+              <p><strong>Gender:</strong> ${person.gender}</p>
+            </div>
+          `;
+        });
+
+        resultsDiv.innerHTML = html;
+      } catch (error) {
+        resultsDiv.innerHTML = '<div class="error">Unable to fetch results right now.</div>';
+      }
+    }
+  </script>
 </body>
 </html>
